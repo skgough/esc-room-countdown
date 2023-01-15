@@ -186,11 +186,11 @@
         <input type="text" id="passphraseText" placeholder="Required" spellcheck="false" autocomplete="off">
         <h2>Guess Button</h2>
         <label for="initText">Button Text</label>
-        <input type="text" id="initText" placeholder="Decrypt">
+        <input type="text" id="initText" placeholder="Decrypt" spellcheck="false" autocomplete="off">
         <label for="solveText">Solved Text</label>
-        <input type="text" id="solveText" placeholder="Decrypted">
+        <input type="text" id="solveText" placeholder="Decrypted" spellcheck="false" autocomplete="off">
         <label for="failText">Time Up Text</label>
-        <input type="text" id="failText" placeholder="Locked">
+        <input type="text" id="failText" placeholder="Locked" spellcheck="false" autocomplete="off">
         <button id="start" disabled>Start</button>
     </form>
 
@@ -275,6 +275,7 @@
                 solveButton.value = (failText.value === '')
                     ? failText.placeholder
                     : failText.value;
+                solveButton.disabled = true;
             }, timeInterval)
         });
 
