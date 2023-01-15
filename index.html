@@ -281,6 +281,7 @@
                     solved = true;
                     clearInterval(countdown);
                     main.classList.add('solved');
+                    solveInput.setAttribute('readonly', '')
                     solveButton.value  = 'Decrypted';
                 } else {
                     errorAnimate(solveInput);
