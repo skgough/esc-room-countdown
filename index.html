@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang='en'>
+
+<head>
+    <title>Escape Room Countdown</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body>
+    <style>
+        * {
+            font: 1rem monospace;
+            text-transform: uppercase;
+            color: limegreen;
+            background: black;
+        }
+
+        body {
+            overflow: hidden;
+        }
+        
+        :focus {
+            outline: none;
+            border: .125em solid limegreen;
+            box-shadow: 0 0 0 .125em inset black;
+        }
+
+        ::selection {
+            background: limegreen;
+            color: black
+        }
+
+        input:not([type=submit]) {
+            -moz-appearance: textfield;
+            border: 2px solid transparent;
+            text-transform: none;
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            display: none;
+        }
+
+        input:focus {
+            border-color: limegreen;
+            outline: none;
+        }
+
+        button, input[type=submit] {
+            appearance: none;
+            border: 2px solid limegreen;
+            font-weight: bold;
+        }
+
+        :is(button, input[type=submit]):not(:disabled) {
+            background: limegreen;
+            color: black;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+        }
+
+        main {
+            user-select: none;
+            height: 100vh;
+            width: 100vw;
+            align-items: center;
+            place-content: center;
+            grid-template-columns: min-content;
+        }
+
+        #timer {
+            font-size: 10rem;
+            text-align: center;
+        }
+
+        #passphraseSolve {
+            display: grid;
+            grid-template-columns: repeat(2, min-content);
+            gap: .5rem 1rem;
+        }
+        #passphraseSolve h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            grid-column: span 2;
+        }
+
+        #passphraseSolve input {
+            border: .125em solid limegreen;
+            font-size: 2rem;
+            padding: .5rem;
+        }
+
+        main.solved #timer {
+            animation: flash 1s infinite;
+        }
+        @keyframes flash {
+            0%   { color: limegreen }
+            50%  { color: transparent }
+            100% { color: limegreen }
+        }
+
+        main.solved #passphraseSolve input {
+            background: limegreen;
+            color: black;
+        }
+
+        #conditions {
+            margin: 2rem auto;
+            border: 2px solid limegreen;
+            width: min-content;
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: repeat(6, min-content);
+            gap: .5rem 0;
+        }
+
+        #conditions input[type=number] {
+            width: 2ch;
+        }
+
+        #conditions h2 {
+            grid-column: span 6;
+            margin: 0;
+            border-bottom: 2px solid limegreen;
+            padding-bottom: .5rem;
+        }
+
+        #conditions label {
+            grid-column: span 2;
+        }
+
+        #passphraseInput,
+        [for=passphraseInput] {
+            grid-column: span 6;
+        }
+
+        #passphraseInput {
+            display: block;
+            border-bottom-color: limegreen;
+            width: 20ch;
+        }
+
+        #start {
+            grid-column: span 6;
+        }
+
+        .error {
+            animation: error .500s 3;
+        }
+        @keyframes error {
+            0%   { color: limegreen; background: black; }
+            50%  { color: white;     background: red;   }
+            100% { color: limegreen; background: black; }
+        }
+
+        main { display: none }
+        @media (display-mode: fullscreen) {
+            main        { display: grid }
+            #conditions { display: none }
+        }
+    </style>
+    <main>
+        <div id="timer"></div>
+        <form id="passphraseSolve">
+            <h2>Passphrase</h2>
+            <input type="text" autocomplete="off" spellcheck="false">
+            <input type="submit" value="Decrypt" disabled>
+        </form>
+    </main>
+    <form id="conditions">
+        <h2>Duration</h2>
+        <label for="hourInput">Hour</label>
+        <label for="minuteInput">Min</label>
+        <label for="secondInput">Sec</label>
+        <input id="hourInput" type="number" min="0" max="99" placeholder="0" autocomplete="off">
+        <span>:</span>
+        <input id="minuteInput" type="number" min="0" max="59" placeholder="0" autocomplete="off">
+        <span>:</span>
+        <input id="secondInput" type="number" min="0" max="59" placeholder="0" autocomplete="off">
+        <h2>Passphrase</h2>
+        <input type="text" id="passphraseInput" spellcheck="false" autocomplete="off">
+        <button id="start" disabled>Start</button>
+    </form>
+
+    <script>
+        let timeInterval = 0;
+        let passphrase = '';
+    
+        const main        = document.querySelector('main');
+        const timer       = document.getElementById('timer');
+        const solveForm   = document.getElementById('passphraseSolve');
+        const solveInput  = solveForm.querySelector('input[type=text]');
+        const solveButton = solveForm.querySelector('input[type=submit]');
+        const conditions  = document.getElementById('conditions');
+        const hourInput   = document.getElementById('hourInput');
+        const minsInput   = document.getElementById('minuteInput');
+        const secsInput   = document.getElementById('secondInput');
+        const startButton = document.getElementById('start');
+        
+    
+        document.querySelectorAll('#conditions input').forEach(input => {
+            input.addEventListener('input', e => {
+                const hours = !isNaN(parseInt(hourInput.value)) 
+                    ? parseInt(hourInput.value) 
+                    : 0;
+                const mins  = !isNaN(parseInt(minsInput.value)) 
+                    ? parseInt(minsInput.value) 
+                    : 0;
+                const secs  = !isNaN(parseInt(secsInput.value)) 
+                    ? parseInt(secsInput.value) 
+                    : 0;
+    
+                timeInterval = hours * 3_600_000
+                             + mins  * 60_000
+                             + secs  * 1_000;
+    
+                startButton.disabled = (timeInterval === 0 || passphrase === '');
+            })
+        });
+    
+        document.getElementById('passphraseInput')
+            .addEventListener('input', e => {
+                passphrase = e.target.value;
+                startButton.disabled = (timeInterval === 0 || passphrase === '');
+            });
+    
+        hourInput.focus();
+    
+        function formatTime(milliseconds) {
+            const hours = Math.floor(milliseconds / 3_600_000);
+            let   mins  = Math.floor((milliseconds - (hours * 3_600_000)) / 60_000);
+            let   secs  = Math.floor((milliseconds - ((hours * 3_600_000) + (mins * 60_000))) / 1_000);
+    
+            if (mins < 10) mins = `0${mins}`;
+            if (secs < 10) secs = `0${secs}`;
+
+            if (hours > 0) {
+                return `${hours}:${mins}:${secs}`;
+            } else {
+                return `${mins}:${secs}`;
+            }
+        };
+    
+        let countdown;
+        conditions.addEventListener('submit', async e => {
+            e.preventDefault();
+            await main.requestFullscreen();
+            solveInput.focus();
+            timer.innerText = formatTime(timeInterval);
+            countdown = setInterval(() => {
+                timeInterval -= 1000;
+                timer.innerText = formatTime(timeInterval);
+            }, 1000);
+        });
+
+        solveInput.addEventListener('input', e => {
+            solveButton.disabled = (solveInput.value === '');
+        })
+        
+        let errorTimeout
+        function errorAnimate(element) {
+            clearTimeout(errorTimeout);
+            element.classList.remove('error');
+            element.offsetWidth; // trigger reflow
+            element.classList.add('error');
+            errorTimeout = setTimeout(() => {
+                element.classList.remove('error');
+            }, 1500)
+        }
+
+        let solved = false;
+        passphraseSolve.addEventListener('submit', e => {
+            e.preventDefault();
+            if (!solved) {
+                if (solveInput.value === passphrase) {
+                    solved = true;
+                    clearInterval(countdown);
+                    main.classList.add('solved');
+                    solveButton.value  = 'Decrypted';
+                } else {
+                    errorAnimate(solveInput);
+                }
+            }
+        })
+    </script>
+</body>
+</html>
